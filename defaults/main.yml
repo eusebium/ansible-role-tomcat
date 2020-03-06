@@ -1,0 +1,77 @@
+---
+# defaults file for tomcat
+tomcat_state: present
+
+tomcat_version: 8.5.51
+tomcat_major_version: "{{ tomcat_version.split('.')[0].tomcat_version.split('.')[1] }}"
+
+tomcat_install_java: True
+tomcat_java_version: 1.8
+tomcat_java_home: /usr/lib/jvm/jre
+
+tomcat_java_packages_EL:
+ - {package: "java-{{ tomcat_java_version }}{% if '1.' in tomcat_java_version|string %}.0{% endif %}-openjdk"}
+
+tomcat_downloadURL: https://archive.apache.org/dist
+
+tomcat_user: tomcat
+tomcat_group: tomcat
+
+tomcat_base_path: /opt
+tomcat_install_path: "{{ tomcat_base_path }}/apache-tomcat-{{ tomcat_version }}"
+tomcat_service_name: tomcat
+
+tomcat_jvm_memory_percentage_xms: 55
+tomcat_jvm_memory_percentage_xmx: 55
+
+tomcat_set_production: True
+tomcat_webapps_auto_deployment: True
+
+tomcat_allow_manager_access_only_from_localhost: False
+tomcat_allow_host_manager_access_only_from_localhost: False
+
+tomcat_debug_mode: False
+
+tomcat_listen_address: 0.0.0.0
+tomcat_port_shutdown: 8005
+tomcat_port_connector: 8080
+tomcat_port_redirect: 8443
+tomcat_port_ajp: 8009
+tomcat_port_debug: 8000
+
+tomcat_service_enabled_on_startup: True
+
+tomcat_users: []
+
+tomcat_user_roles: []
+
+tomcat_template_manager_context: "manager-context.xml.j2"
+tomcat_template_host_manager_context: "host-manager-context.xml.j2"
+tomcat_template_systemd_service: "tomcat.service.j2"
+tomcat_template_server: "tomcat-server-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
+tomcat_template_users: "tomcat-users-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
+
+tomcat_catalina_opts: ''
+tomcat_java_opts: ''
+
+tomcat_server_engine_extra_conf:
+  jvmRoute: "{{ ansible_hostname }}_1"
+
+tomcat_server_http_extra_conf:
+  address: "{{ tomcat_listen_address }}"
+
+tomcat_server_ajp_extra_conf:
+  secretRequired: "false"
+  address: "{{ tomcat_listen_address }}"
+
+tomcat_lib_install_ojdbc: False
+tomcat_oracle_home: /usr/lib/oracle/12.2/client64
+
+# Uninstall default parameters
+tomcat_uninstall_create_backup: True
+
+tomcat_uninstall_remove_user: False
+tomcat_uninstall_remove_group: False
+tomcat_uninstall_remove_java: False
+
+tomcat_uninstall_remove_all: False

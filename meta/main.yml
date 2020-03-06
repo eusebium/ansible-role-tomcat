@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  author: eusebium
+  role_name: tomcat
+  description: Ansible role to install and configure Apache Tomcat on CentOS/RHEL
+  license: MIT
+  min_ansible_version: 2.3
+  platforms:
+    - name: EL
+      versions:
+        - 7
+  galaxy_tags: [java, web, system, tomcat]
+dependencies: []

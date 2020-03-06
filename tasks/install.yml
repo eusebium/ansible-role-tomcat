@@ -1,0 +1,72 @@
+---
+# tasks file for tomcat
+- name: Install Java
+  yum:
+    name: "{{ item.package }}"
+    state: present
+  with_items: "{{ tomcat_java_packages_EL }}"
+  when: tomcat_install_java|bool
+
+- name: Check if tomcat is already installed
+  stat:
+    path: "{{ tomcat_install_path }}"
+  register: tomcat_is_installed
+
+- name: Create group {{ tomcat_group }}
+  group:
+    name: "{{ tomcat_group }}"
+    gid: "{{ tomcat_group_gid | default(omit) }}"
+    state: present
+
+- name: Create user {{ tomcat_user }}
+  user:
+    name: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    uid: "{{ tomcat_user_uid | default(omit) }}"
+    createhome: false
+    system: true
+    state: present
+
+- name: Create temporary directory
+  tempfile:
+    state: directory
+    prefix: "tomcat-install-"
+  register: tomcat_tempdir
+  notify: remove-tomcat_tempdir
+  when: not tomcat_is_installed.stat.exists
+
+- name: Download apache-tomcat-{{ tomcat_version }}.tar.gz
+  get_url:
+    url: "{{ tomcat_downloadURL }}/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: '{{ tomcat_tempdir.path }}'
+    timeout: 120
+  when: not tomcat_is_installed.stat.exists
+
+- name: Unarchive apache-tomcat-{{ tomcat_version }}.tar.gz at {{ tomcat_install_path }}
+  unarchive:
+    src: "{{ tomcat_tempdir.path }}/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: "{{ tomcat_base_path }}"
+    remote_src: True
+    owner: "{% if tomcat_set_production %}root{% else %}{{ tomcat_user }}{% endif %}"
+    group: "{{ tomcat_group }}"
+    creates: "{{ tomcat_install_path }}"
+  register: tomcat_installed
+  when: not tomcat_is_installed.stat.exists
+
+- name: Configure service file {{ tomcat_service_name }}.service
+  template:
+    src: "{{ tomcat_template_systemd_service }}"
+    dest: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
+  notify: restart tomcat
+
+- name: Enable tomcat service on startup
+  systemd:
+    name: "{{ tomcat_service_name }}"
+    enabled: "{% if tomcat_service_enabled_on_startup %}yes{% else %}no{% endif %}"
+    daemon_reload: yes
+
+- name: Create symlink {{ tomcat_install_path }} to {{ tomcat_base_path }}/{{ tomcat_service_name }}
+  file:
+    src: "{{ tomcat_install_path }}"
+    dest: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
+    state: link

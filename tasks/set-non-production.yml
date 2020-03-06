@@ -1,0 +1,19 @@
+---
+# tasks file for tomcat
+
+- name: Set owner and group for non-production installation
+  file:
+    path: "{{ tomcat_install_path }}"
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    recurse: yes
+
+- name: Set directories permissions for non-production installation
+  command: find {{ tomcat_install_path }} -type d -exec chmod -c 2775 {} \;
+  register: find_chmod_result
+  changed_when: 'find_chmod_result.stdout | length > 0'
+
+- name: Set files permissions for non-production installation
+  command: find {{ tomcat_install_path }} -type f -not -name "*.sh" -exec chmod -c 0664 {} \;
+  register: find_chmod_result
+  changed_when: 'find_chmod_result.stdout | length > 0'

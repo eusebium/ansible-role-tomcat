@@ -1,0 +1,108 @@
+---
+# tasks file for tomcat
+- name: Create directory for ServerInfo.properties
+  file:
+    path: "{{ tomcat_install_path }}/lib/org/apache/catalina/util"
+    state: directory
+
+- name: Remove version string from HTTP error messages
+  copy:
+    content: |
+      server.info=
+      server.number=
+    dest: "{{ tomcat_install_path }}/lib/org/apache/catalina/util/ServerInfo.properties"
+  notify: restart tomcat
+
+- name: Set root directory owner/group for production installation
+  file:
+    path: "{{ tomcat_install_path }}"
+    owner: root
+    group: "{{ tomcat_group }}"
+
+- name: Set recursively directories owner/group for production installation
+  file:
+    path: "{{ tomcat_install_path }}/{{ item }}"
+    owner: root
+    group: "{{ tomcat_group }}"
+    recurse: yes
+  with_items:
+    - bin
+    - conf
+    - lib
+
+- name: Set recursively directories owner/group for production installation
+  file:
+    path: "{{ tomcat_install_path }}/{{ item }}"
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    recurse: yes
+  with_items:
+    - temp
+    - work
+
+- name: Set recursively webapps directory owner/group for production installation
+  file:
+    path: "{{ tomcat_install_path }}/webapps"
+    owner: "{% if tomcat_webapps_auto_deployment %}{{ tomcat_user }}{% else %}root{% endif %}"
+    group: "{{ tomcat_group }}"
+    recurse: yes
+
+- name: Set directories permissions for production installation
+  command: find {{ tomcat_install_path }} -type d -exec chmod -c 2750 {} \;
+  register: find_chmod_result
+  changed_when: 'find_chmod_result.stdout | length > 0'
+
+- name: Set files permissions for production installation (1/2)
+  command: find {{ tomcat_install_path }} -type f -not -name "*.sh" -exec chmod -c 0640 {} \;
+  register: find_chmod_result
+  changed_when: 'find_chmod_result.stdout | length > 0'
+
+- name: Set files permissions for production installation (2/2)
+  command: find {{ tomcat_install_path }} -type f -name "*.sh" -exec chmod -c 0750 {} \;
+  register: find_chmod_result
+  changed_when: 'find_chmod_result.stdout | length > 0'
+
+- name: Delete manager application
+  file:
+    path: "{{ tomcat_install_path }}/webapps/{{ item }}"
+    state: absent
+  loop:
+    - ROOT
+    - examples
+    - manager
+    - host-manager
+    - docs
+
+- name: Create /var/log/{{ tomcat_service_name }} directory
+  file:
+    path: /var/log/{{ tomcat_service_name }}
+    state: directory
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: 0750
+
+- name: Stat original logs directory
+  stat:
+    path: "{{ tomcat_install_path }}/logs"
+  register: tomcat_stat_original_logs_path
+
+- name: Copy logs to new logs directory
+  copy:
+    src: "{{ tomcat_install_path }}/logs/"
+    dest: /var/log/{{ tomcat_service_name }}/
+    remote_src: yes
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+  when: tomcat_stat_original_logs_path.stat.isdir|bool
+
+- name: Remove original logs directory
+  file:
+    path: "{{ tomcat_install_path }}/logs/"
+    state: absent
+  when: tomcat_stat_original_logs_path.stat.isdir|bool
+
+- name: Create link to new log directory
+  file:
+    src: /var/log/{{ tomcat_service_name }}
+    dest: "{{ tomcat_install_path }}/logs"
+    state: link

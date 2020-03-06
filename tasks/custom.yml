@@ -1,0 +1,7 @@
+---
+- name: Install Oracle ojdbc8.jar lib
+  copy:
+    src: "{{ tomcat_oracle_home }}/lib/ojdbc8.jar"
+    dest: "{{ tomcat_install_path }}/lib"
+    remote_src: true
+  when: tomcat_lib_install_ojdbc|bool
