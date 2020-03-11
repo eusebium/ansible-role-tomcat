@@ -125,3 +125,7 @@ Change it to "True" to uninstall Java after tomcat is uninstalled.
   * `tomcat_uninstall_remove_group`: False
 - `tomcat_uninstall_remove_all`: False
 In order to override the above values and uninstall everything, set it to "True".
+
+- `tomcat_upgrade`: False
+- `tomcat_upgrade_from_version`: 8.5.42
+Upgrade from old version. The upgrade is done by copying some non default conf and webapps from old path to new path.

@@ -1,0 +1,44 @@
+---
+- name: Check if old tomcat path is present
+  stat:
+    path: "{{ tomcat_upgrade_from_path }}"
+  register: tomcat_stat_upgrade_from_path
+
+- name: Exit if old tomcat path is not present
+  assert:
+      that: tomcat_stat_upgrade_from_path.stat.exists
+      fail_msg: Old tomcat version is not present
+
+- name: Find personalized conf in old tomcat path
+  find:
+    paths: "{{ tomcat_upgrade_from_path }}/conf"
+    file_type: any
+    exclude: "{{ tomcat_upgrade_copy_conf_exclude }}"
+  register: tomcat_find_upgrade_from_path_conf
+
+- name: Copy conf from old to new
+  copy:
+    src: "{{ item }}"
+    dest: "{{ tomcat_install_path }}/conf/"
+    remote_src: yes
+    owner: root
+    group: "{{ tomcat_group }}"
+    mode: o-rwx
+  loop: "{{ tomcat_find_upgrade_from_path_conf.files | map(attribute='path') | list }}"
+  notify: restart tomcat
+
+- name: Find deployed webapps
+  find:
+    paths: "{{ tomcat_upgrade_from_path }}/webapps"
+    file_type: file
+  register: tomcat_find_upgrade_from_path_webapps
+
+- name: Copy webapps from old to new
+  copy:
+    src: "{{ item }}"
+    dest: "{{ tomcat_install_path }}/webapps/"
+    remote_src: yes
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: o-rwx
+  loop: "{{ tomcat_find_upgrade_from_path_webapps.files | map(attribute='path') | list }}"

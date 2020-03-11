@@ -75,3 +75,18 @@ tomcat_uninstall_remove_group: False
 tomcat_uninstall_remove_java: False
 
 tomcat_uninstall_remove_all: False
+
+# Upgrade tomcat default parameters
+tomcat_upgrade: False
+tomcat_upgrade_from_version: 8.5.42
+tomcat_upgrade_from_path: "{{ tomcat_base_path }}/apache-tomcat-{{ tomcat_upgrade_from_version }}"
+tomcat_upgrade_copy_conf_exclude:
+  - Catalina
+  - catalina.policy
+  - catalina.properties
+  - jaspic-providers.xml
+  - jaspic-providers.xsd
+  - tomcat-users.xml
+  - tomcat-users.xsd
+  - server.xml
+  - web.xml

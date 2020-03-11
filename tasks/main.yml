@@ -18,3 +18,8 @@
 - name: Uninstall tomcat
   include: uninstall.yml
   when: tomcat_state == "absent"
+
+- name: Upgrade tomcat
+  include: upgrade.yml
+  when: tomcat_upgrade | bool
+  tags: test
