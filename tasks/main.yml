@@ -1,5 +1,14 @@
 ---
 # tasks file for tomcat
+- name: Stat previous tomcat path
+  stat:
+    path: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
+  register: tomcat_stat_previous_version
+  when:
+    - tomcat_upgrade | bool
+    - tomcat_state == "present"
+  tags: tomcat-upgrade
+
 - name: Install tomcat
   include: install.yml
   when: tomcat_state == "present"
@@ -21,5 +30,7 @@
 
 - name: Upgrade tomcat
   include: upgrade.yml
-  when: tomcat_upgrade | bool
+  when:
+    - tomcat_upgrade | bool
+    - tomcat_state == "present"
   tags: tomcat-upgrade

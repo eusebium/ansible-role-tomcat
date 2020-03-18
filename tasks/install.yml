@@ -1,10 +1,5 @@
 ---
 # tasks file for tomcat
-- name: Stat previous tomcat path
-  stat:
-    path: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
-  register: tomcat_stat_previous_version
-
 - name: Install Java
   yum:
     name: "{{ item.package }}"

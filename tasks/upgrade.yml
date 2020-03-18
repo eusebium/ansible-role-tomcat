@@ -5,6 +5,7 @@
   when:
     - tomcat_stat_previous_version.stat.islnk is defined
     - tomcat_stat_previous_version.stat.islnk | bool
+    - tomcat_upgrade_from_path != tomcat_stat_previous_version.stat.lnk_target
 
 - name: Check if old tomcat path is present
   stat:
@@ -20,14 +21,13 @@
     - meta: end_play
   when: not tomcat_stat_upgrade_from_path.stat.exists or tomcat_upgrade_from_path == tomcat_install_path
 
-- name: Find personalized conf in old tomcat path
+- name: Find conf in old tomcat path
   find:
     paths: "{{ tomcat_upgrade_from_path }}/conf"
     file_type: any
-    exclude: "{{ tomcat_upgrade_copy_conf_exclude }}"
   register: tomcat_find_upgrade_from_path_conf
 
-- name: Copy conf from old to new
+- name: Copy conf from old to new - no force
   copy:
     src: "{{ item }}"
     dest: "{{ tomcat_install_path }}/conf/"
@@ -35,7 +35,38 @@
     owner: root
     group: "{{ tomcat_group }}"
     mode: o-rwx
+    force: no
   loop: "{{ tomcat_find_upgrade_from_path_conf.files | map(attribute='path') | list }}"
+  notify: restart tomcat
+
+- name: Copy conf from old to new - force
+  copy:
+    src: "{{ tomcat_upgrade_from_path }}/conf/{{ item }}"
+    dest: "{{ tomcat_install_path }}/conf/"
+    remote_src: yes
+    owner: root
+    group: "{{ tomcat_group }}"
+    mode: o-rwx
+    force: yes
+  loop: "{{ tomcat_upgrade_conf_copy_force }}"
+  notify: restart tomcat
+
+- name: Find lib in old tomcat path
+  find:
+    paths: "{{ tomcat_upgrade_from_path }}/lib"
+    file_type: any
+  register: tomcat_find_upgrade_from_path_lib
+
+- name: Copy lib from old to new - no force
+  copy:
+    src: "{{ item }}"
+    dest: "{{ tomcat_install_path }}/lib/"
+    remote_src: yes
+    owner: root
+    group: "{{ tomcat_group }}"
+    mode: o-rwx
+    force: no
+  loop: "{{ tomcat_find_upgrade_from_path_lib.files | map(attribute='path') | list }}"
   notify: restart tomcat
 
 - name: Find deployed webapps
