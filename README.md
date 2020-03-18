@@ -127,5 +127,7 @@ Change it to "True" to uninstall Java after tomcat is uninstalled.
 In order to override the above values and uninstall everything, set it to "True".
 
 - `tomcat_upgrade`: False
-- `tomcat_upgrade_from_version`: 8.5.42
 Upgrade from old version. The upgrade is done by copying some non default conf and webapps from old path to new path.
+
+- `tomcat_upgrade_from_path`: /usr/apache-tomcat-8.5.42
+This var is used only if "{{ tomcat_base_path }}/{{ tomcat_service_name }}" is not a link, tomcat is installed on another path and you want to upgrade that tomcat. There is no need to use these var if previous version of tomcat was installed with this role.

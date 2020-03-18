@@ -1,13 +1,24 @@
 ---
+- name: Set upgrade from path
+  set_fact:
+    tomcat_upgrade_from_path: "{{ tomcat_stat_previous_version.stat.lnk_target }}"
+  when:
+    - tomcat_stat_previous_version.stat.islnk is defined
+    - tomcat_stat_previous_version.stat.islnk | bool
+
 - name: Check if old tomcat path is present
   stat:
     path: "{{ tomcat_upgrade_from_path }}"
   register: tomcat_stat_upgrade_from_path
 
-- name: Exit if old tomcat path is not present
-  assert:
-      that: tomcat_stat_upgrade_from_path.stat.exists
-      fail_msg: Old tomcat version is not present
+- name: Exit if previous tomcat path is not present or is the same version
+  block:
+    - name: Exit if previous tomcat path is not present or is the same version
+      debug:
+        msg: Old tomcat version is not present or is the same version
+
+    - meta: end_play
+  when: not tomcat_stat_upgrade_from_path.stat.exists or tomcat_upgrade_from_path == tomcat_install_path
 
 - name: Find personalized conf in old tomcat path
   find:

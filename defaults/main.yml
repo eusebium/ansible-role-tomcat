@@ -78,8 +78,7 @@ tomcat_uninstall_remove_all: False
 
 # Upgrade tomcat default parameters
 tomcat_upgrade: False
-tomcat_upgrade_from_version: 8.5.42
-tomcat_upgrade_from_path: "{{ tomcat_base_path }}/apache-tomcat-{{ tomcat_upgrade_from_version }}"
+tomcat_upgrade_from_path: /usr/apache-tomcat-8.5.42
 tomcat_upgrade_copy_conf_exclude:
   - Catalina
   - catalina.policy
