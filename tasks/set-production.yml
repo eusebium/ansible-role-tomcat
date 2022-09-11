@@ -11,19 +11,19 @@
       server.info=
       server.number=
     dest: "{{ tomcat_install_path }}/lib/org/apache/catalina/util/ServerInfo.properties"
-  notify: restart tomcat
+  notify: Restart tomcat
 
 - name: Set root directory owner/group for production installation
   file:
     path: "{{ tomcat_install_path }}"
     owner: root
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
 
 - name: Set recursively directories owner/group for production installation
   file:
     path: "{{ tomcat_install_path }}/{{ item }}"
     owner: root
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     recurse: yes
   with_items:
     - bin
@@ -34,7 +34,7 @@
   file:
     path: "{{ tomcat_install_path }}/{{ item }}"
     owner: "{{ tomcat_user }}"
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     recurse: yes
   with_items:
     - temp
@@ -44,7 +44,7 @@
   file:
     path: "{{ tomcat_install_path }}/webapps"
     owner: "{% if tomcat_webapps_auto_deployment %}{{ tomcat_user }}{% else %}root{% endif %}"
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     recurse: yes
 
 - name: Set directories permissions for production installation
@@ -78,7 +78,7 @@
     path: /var/log/{{ tomcat_service_name }}
     state: directory
     owner: "{{ tomcat_user }}"
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     mode: 0750
 
 - name: Stat original logs directory
@@ -92,7 +92,7 @@
     dest: /var/log/{{ tomcat_service_name }}/
     remote_src: yes
     owner: "{{ tomcat_user }}"
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
   when: tomcat_stat_original_logs_path.stat.isdir|bool
 
 - name: Remove original logs directory

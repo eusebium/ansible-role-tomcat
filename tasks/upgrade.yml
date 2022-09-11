@@ -1,31 +1,10 @@
 ---
-- name: Set upgrade from path
-  set_fact:
-    tomcat_upgrade_from_path: "{{ tomcat_stat_previous_version.stat.lnk_target }}"
-  when:
-    - tomcat_stat_previous_version.stat.islnk is defined
-    - tomcat_stat_previous_version.stat.islnk | bool
-    - tomcat_upgrade_from_path != tomcat_stat_previous_version.stat.lnk_target
-
-- name: Check if old tomcat path is present
-  stat:
-    path: "{{ tomcat_upgrade_from_path }}"
-  register: tomcat_stat_upgrade_from_path
-
-- name: Exit if previous tomcat path is not present or is the same version
-  block:
-    - name: Exit if previous tomcat path is not present or is the same version
-      debug:
-        msg: Old tomcat version is not present or is the same version
-
-    - meta: end_play
-  when: not tomcat_stat_upgrade_from_path.stat.exists or tomcat_upgrade_from_path == tomcat_install_path
-
 - name: Find conf in old tomcat path
   find:
-    paths: "{{ tomcat_upgrade_from_path }}/conf"
+    paths:
+      - "{{ tomcat_previous_version_path }}/conf"
     file_type: any
-  register: tomcat_find_upgrade_from_path_conf
+  register: tomcat_upgrade_from_conf
 
 - name: Copy conf from old to new - no force
   copy:
@@ -33,29 +12,30 @@
     dest: "{{ tomcat_install_path }}/conf/"
     remote_src: yes
     owner: root
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: no
-  loop: "{{ tomcat_find_upgrade_from_path_conf.files | map(attribute='path') | list }}"
-  notify: restart tomcat
+  loop: "{{ tomcat_upgrade_from_conf.files | map(attribute='path') | list }}"
+  notify: Restart tomcat
 
 - name: Copy conf from old to new - force
   copy:
-    src: "{{ tomcat_upgrade_from_path }}/conf/{{ item }}"
+    src: "{{ tomcat_previous_version_path }}/conf/{{ item }}"
     dest: "{{ tomcat_install_path }}/conf/"
     remote_src: yes
     owner: root
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: yes
   loop: "{{ tomcat_upgrade_conf_copy_force }}"
-  notify: restart tomcat
+  notify: Restart tomcat
 
 - name: Find lib in old tomcat path
   find:
-    paths: "{{ tomcat_upgrade_from_path }}/lib"
+    paths:
+      - "{{ tomcat_previous_version_path }}/lib"
     file_type: any
-  register: tomcat_find_upgrade_from_path_lib
+  register: tomcat_upgrade_from_lib
 
 - name: Copy lib from old to new - no force
   copy:
@@ -63,17 +43,18 @@
     dest: "{{ tomcat_install_path }}/lib/"
     remote_src: yes
     owner: root
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: no
-  loop: "{{ tomcat_find_upgrade_from_path_lib.files | map(attribute='path') | list }}"
-  notify: restart tomcat
+  loop: "{{ tomcat_upgrade_from_lib.files | map(attribute='path') | list }}"
+  notify: Restart tomcat
 
 - name: Find deployed webapps
   find:
-    paths: "{{ tomcat_upgrade_from_path }}/webapps"
+    paths:
+      - "{{ tomcat_previous_version_path }}/webapps"
     file_type: file
-  register: tomcat_find_upgrade_from_path_webapps
+  register: tomcat_upgrade_from_webapps
 
 - name: Copy webapps from old to new
   copy:
@@ -81,6 +62,48 @@
     dest: "{{ tomcat_install_path }}/webapps/"
     remote_src: yes
     owner: "{{ tomcat_user }}"
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     mode: o-rwx
-  loop: "{{ tomcat_find_upgrade_from_path_webapps.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_upgrade_from_webapps.files | map(attribute='path') | list }}"
+
+- name: Find extra folders in old
+  find:
+    paths: "{{ tomcat_previous_version_path }}"
+    file_type: directory
+  register: tomcat_upgrade_extra_folders_old
+
+- name: Find extra folders in new
+  find:
+    paths: "{{ tomcat_install_path }}"
+    file_type: directory
+  register: tomcat_upgrade_extra_folders_new
+
+- name: Set difference for extra config folders
+  set_fact:
+    tomcat_upgrade_extra_folders_diff: "{{ tomcat_upgrade_extra_folders_old.files|map(attribute='path')|map('regex_replace','.*/','')|list|difference(tomcat_upgrade_extra_folders_new.files|map(attribute='path')|map('regex_replace','.*/','')|list) }}"
+
+- name: Copy extra folders from old to new
+  copy:
+    src: "{{ tomcat_previous_version_path + '/' + item }}"
+    dest: "{{ tomcat_install_path }}/"
+    remote_src: yes
+    owner: root
+    group: "{{ tomcat_user_group }}"
+    mode: o-rwx
+  loop: "{{ tomcat_upgrade_extra_folders_diff }}"
+
+- name: Backup/Archive old path
+  block:
+    - name: Archive old path
+      archive:
+        path: "{{ tomcat_previous_version_path }}"
+        dest: "{{ tomcat_previous_version_path }}.tgz"
+        owner: root
+        group: root
+        mode: o-rwx
+
+    - name: Remove old path
+      file:
+        path: "{{ tomcat_previous_version_path }}"
+        state: absent
+  when: tomcat_upgrade_archive_old_path|bool

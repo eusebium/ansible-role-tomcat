@@ -1,13 +1,13 @@
 ---
 # handlers file for tomcat
 
-- name: restart tomcat
-  systemd:
+- name: Restart tomcat
+  ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
     state: restarted
     daemon_reload: yes
 
-- name: remove-tomcat_tempdir
-  file:
+- name: Remove tomcat tempdir
+  ansible.builtin.file:
     path: "{{ tomcat_tempdir.path }}"
     state: absent

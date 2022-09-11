@@ -2,30 +2,36 @@
 # defaults file for tomcat
 tomcat_state: present
 
-tomcat_version: 8.5.51
-tomcat_major_version: "{{ tomcat_version.split('.')[0].tomcat_version.split('.')[1] }}"
-
-tomcat_install_java: True
+tomcat_install_java: true
 tomcat_java_version: 1.8
 tomcat_java_home: /usr/lib/jvm/jre
+tomcat_java_packages:
+ - "java-{{ tomcat_java_version }}{% if '1.' in tomcat_java_version | string %}.0{% endif %}-openjdk-headless"
 
-tomcat_java_packages_EL:
- - {package: "java-{{ tomcat_java_version }}{% if '1.' in tomcat_java_version|string %}.0{% endif %}-openjdk"}
+tomcat_version: 8.5.51
+tomcat_download_url: https://archive.apache.org/dist
 
-tomcat_downloadURL: https://archive.apache.org/dist
+# used for diferencing tomcat instances, default to application asset (es: C21 | lower)
+tomcat_instance_prefix: ''
 
-tomcat_user: tomcat
-tomcat_group: tomcat
+tomcat_user: "{{ (tomcat_instance_prefix | length > 0) | ternary(tomcat_instance_prefix | lower + '-', '') + 'tomcat' }}"
+tomcat_user_group: "{{ tomcat_user }}"
+tomcat_user_uid: ''
+tomcat_user_group_gid: ''
+
+tomcat_service_name: "{{ (tomcat_instance_prefix | length > 0) | ternary(tomcat_instance_prefix | lower + '-', '') + 'tomcat' }}"
+tomcat_systemd_config_path: /etc/systemd/system
+tomcat_service_enabled_on_startup: true
 
 tomcat_base_path: /opt
-tomcat_install_path: "{{ tomcat_base_path }}/apache-tomcat-{{ tomcat_version }}"
-tomcat_service_name: tomcat
+tomcat_install_path: "{{ tomcat_base_path }}/{{ (tomcat_instance_prefix | length > 0) | ternary(tomcat_instance_prefix | lower + '-', '') + 'apache-tomcat-' + tomcat_version }}"
+tomcat_install_path_link: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
 
-tomcat_jvm_memory_percentage_xms: 55
+tomcat_jvm_memory_percentage_xms: 15
 tomcat_jvm_memory_percentage_xmx: 55
 
-tomcat_set_production: True
-tomcat_webapps_auto_deployment: True
+tomcat_set_production: true
+tomcat_webapps_auto_deployment: true
 
 tomcat_allow_manager_access_only_from_localhost: False
 tomcat_allow_host_manager_access_only_from_localhost: False
@@ -39,7 +45,10 @@ tomcat_port_redirect: 8443
 tomcat_port_ajp: 8009
 tomcat_port_debug: 8000
 
-tomcat_service_enabled_on_startup: True
+tomcat_ajp_enabled: False
+tomcat_ajp_listen_address: "::1"
+tomcat_ajp_secret: "my-@jp-s3cr3t"
+tomcat_ajp_secret_required: true
 
 tomcat_users: []
 
@@ -48,6 +57,7 @@ tomcat_user_roles: []
 tomcat_template_manager_context: "manager-context.xml.j2"
 tomcat_template_host_manager_context: "host-manager-context.xml.j2"
 tomcat_template_systemd_service: "tomcat.service.j2"
+tomcat_template_setenv: "tomcat.setenv.sh.j2"
 tomcat_template_server: "tomcat-server-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 tomcat_template_users: "tomcat-users-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 
@@ -68,7 +78,7 @@ tomcat_lib_install_ojdbc: False
 tomcat_oracle_home: /usr/lib/oracle/12.2/client64
 
 # Uninstall default parameters
-tomcat_uninstall_create_backup: True
+tomcat_uninstall_create_backup: true
 
 tomcat_uninstall_remove_user: False
 tomcat_uninstall_remove_group: False
@@ -81,3 +91,5 @@ tomcat_upgrade: False
 tomcat_upgrade_from_path: /usr/apache-tomcat-8.5.42
 tomcat_upgrade_conf_copy_force:
   - context.xml
+  - server.xml
+tomcat_upgrade_archive_old_path: true

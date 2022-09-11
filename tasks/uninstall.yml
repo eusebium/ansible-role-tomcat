@@ -63,14 +63,14 @@
 - name: (uninstall) Delete user {{ tomcat_user }}
   user:
     name: "{{ tomcat_user }}"
-    groups: "{{ tomcat_group }}"
+    groups: "{{ tomcat_user_group }}"
     state: absent
     force: yes
   when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_user
 
-- name: (uninstall) Delete group {{ tomcat_group }}
+- name: (uninstall) Delete group {{ tomcat_user_group }}
   group:
-    name: "{{ tomcat_group }}"
+    name: "{{ tomcat_user_group }}"
     state: absent
   when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_group
 
@@ -78,5 +78,5 @@
   yum:
     name: "{{ item.package }}"
     state: absent
-  with_items: "{{ tomcat_java_packages_EL }}"
+  with_items: "{{ tomcat_java_packages }}"
   when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_java

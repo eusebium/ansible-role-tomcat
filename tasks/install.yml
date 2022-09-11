@@ -1,72 +1,79 @@
 ---
-# tasks file for tomcat
+- name: Get services
+  ansible.builtin.service_facts:
+
+- name: Stop old tomcat if upgrading?
+  ansible.builtin.service:
+    name: "{{ tomcat_service_name }}"
+    state: stopped
+  when: ansible_facts.services[tomcat_service_name + '.service'] is defined
+
 - name: Install Java
-  yum:
-    name: "{{ item.package }}"
+  ansible.builtin.package:
+    name: "{{ tomcat_java_packages }}"
     state: present
-  with_items: "{{ tomcat_java_packages_EL }}"
-  when: tomcat_install_java|bool
+  when: tomcat_install_java
 
-- name: Check if tomcat is already installed
-  stat:
-    path: "{{ tomcat_install_path }}"
-  register: tomcat_is_installed
-
-- name: Create group {{ tomcat_group }}
-  group:
-    name: "{{ tomcat_group }}"
-    gid: "{{ tomcat_group_gid | default(omit) }}"
+- name: Create group {{ tomcat_user_group }}
+  ansible.builtin.group:
+    name: "{{ tomcat_user_group }}"
+    gid: "{{ tomcat_user_group_gid | default(omit, true) }}"
     state: present
 
 - name: Create user {{ tomcat_user }}
-  user:
+  ansible.builtin.user:
     name: "{{ tomcat_user }}"
-    group: "{{ tomcat_group }}"
-    uid: "{{ tomcat_user_uid | default(omit) }}"
+    group: "{{ tomcat_user_group }}"
+    uid: "{{ tomcat_user_uid | default(omit, true) }}"
     createhome: false
     system: true
+    shell: /sbin/nologin
     state: present
 
-- name: Create temporary directory
-  tempfile:
+- name: Create temporary directory for downloading tomcat tgz
+  ansible.builtin.tempfile:
     state: directory
     prefix: "tomcat-install-"
   register: tomcat_tempdir
-  notify: remove-tomcat_tempdir
-  when: not tomcat_is_installed.stat.exists
+  notify: Remove tomcat tempdir
 
 - name: Download apache-tomcat-{{ tomcat_version }}.tar.gz
-  get_url:
-    url: "{{ tomcat_downloadURL }}/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+  ansible.builtin.get_url:
+    url: "{{ tomcat_download_url }}/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
     dest: '{{ tomcat_tempdir.path }}'
+    mode: 0640
     timeout: 120
-  when: not tomcat_is_installed.stat.exists
 
-- name: Unarchive apache-tomcat-{{ tomcat_version }}.tar.gz at {{ tomcat_install_path }}
-  unarchive:
+- name: Unarchive apache-tomcat-{{ tomcat_version }}.tar.gz to {{ tomcat_install_path }}
+  ansible.builtin.unarchive:
     src: "{{ tomcat_tempdir.path }}/apache-tomcat-{{ tomcat_version }}.tar.gz"
     dest: "{{ tomcat_base_path }}"
-    remote_src: True
-    owner: "{% if tomcat_set_production %}root{% else %}{{ tomcat_user }}{% endif %}"
-    group: "{{ tomcat_group }}"
+    remote_src: true
+    owner: "{{ tomcat_set_production | ternary('root', tomcat_user) }}"
+    group: "{{ tomcat_user_group }}"
     creates: "{{ tomcat_install_path }}"
+    extra_opts:
+      - --transform
+      - s#apache-tomcat-{{ tomcat_version }}#{{ (tomcat_instance_prefix | length > 0) | ternary(tomcat_instance_prefix | lower + '-', '') + 'apache-tomcat-' + tomcat_version }}#
   register: tomcat_installed
-  when: not tomcat_is_installed.stat.exists
 
 - name: Configure service file {{ tomcat_service_name }}.service
-  template:
+  ansible.builtin.template:
     src: "{{ tomcat_template_systemd_service }}"
-    dest: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
-  notify: restart tomcat
+    dest: "{{ tomcat_systemd_config_path }}/{{ tomcat_service_name }}.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart tomcat
 
 - name: Enable tomcat service on startup
-  systemd:
+  ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
-    enabled: "{% if tomcat_service_enabled_on_startup %}yes{% else %}no{% endif %}"
+    enabled: "{{ tomcat_service_enabled_on_startup | ternary(true, false) }}"
     daemon_reload: yes
 
 - name: Create symlink {{ tomcat_install_path }} to {{ tomcat_base_path }}/{{ tomcat_service_name }}
-  file:
+  ansible.builtin.file:
     src: "{{ tomcat_install_path }}"
-    dest: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
+    dest: "{{ tomcat_install_path_link }}"
     state: link

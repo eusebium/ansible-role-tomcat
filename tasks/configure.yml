@@ -41,7 +41,7 @@
         dest: "{{ tomcat_install_path }}/conf/server.xml"
         remote_src: yes
         force: yes
-      notify: restart tomcat
+      notify: Restart tomcat
 
     - name: Remove temp server.xml
       file:
@@ -59,7 +59,7 @@
   template:
     src: "{{ tomcat_template_users }}"
     dest: "{{ tomcat_install_path }}/conf/tomcat-users.xml"
-  notify: restart tomcat
+  notify: Restart tomcat
 
 - name: Stat Manager app
   stat:
@@ -70,7 +70,7 @@
   template:
     src: "{{ tomcat_template_manager_context }}"
     dest: "{{ tomcat_install_path }}/webapps/manager/META-INF/context.xml"
-  notify: restart tomcat
+  notify: Restart tomcat
   when: tomcat_stat_manager.stat.exists|bool
 
 - name: Stat Host Manager
@@ -82,14 +82,9 @@
   template:
     src: "{{ tomcat_template_host_manager_context }}"
     dest: "{{ tomcat_install_path }}/webapps/host-manager/META-INF/context.xml"
-  notify: restart tomcat
-  when: tomcat_stat_host_manager.stat.exists|bool
-
-- name: Set production
-  include: set-production.yml
-  when: tomcat_set_production|bool
-  notify: restart tomcat
-
-- name: Set non production
-  include: set-non-production.yml
-  when: not tomcat_set_production|bool
+  notify: Restart tomcat
+- name: Configure setenv.sh
+  template:
+    src: "{{ tomcat_template_setenv }}"
+    dest: "{{ tomcat_install_path }}/{{ tomcat_service_name }}/bin/setenv.sh"
+  notify: Restart tomcat

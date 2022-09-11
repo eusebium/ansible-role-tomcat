@@ -1,0 +1,31 @@
+# Systemd unit file for tomcat
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=syslog.target network.target
+
+[Service]
+Type=forking
+
+Environment=JAVA_HOME={{ tomcat_java_home }}
+Environment=CATALINA_PID={{ tomcat_base_path }}/{{ tomcat_service_name }}/temp/tomcat.pid
+Environment=CATALINA_HOME={{ tomcat_base_path }}/{{ tomcat_service_name }}
+Environment=CATALINA_BASE={{ tomcat_base_path }}/{{ tomcat_service_name }}
+Environment='CATALINA_OPTS={{ tomcat_catalina_opts }} {% if tomcat_jvm_memory_percentage_xms != '' %}-Xms{{ tomcat_jvm_memory_percentage_xms*ansible_memtotal_mb//100 }}M{% endif %} {% if tomcat_jvm_memory_percentage_xmx != '' %}-Xmx{{ tomcat_jvm_memory_percentage_xmx*ansible_memtotal_mb//100 }}M{% endif %} -server -XX:+UseParallelGC {% if tomcat_debug_mode == True %}-Xdebug -Xrunjdwp:transport=dt_socket,address={{ tomcat_port_debug }},server=y,suspend=n{% endif %}'
+Environment='JAVA_OPTS={{ tomcat_java_opts }} -Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom'
+{% if tomcat_lib_install_ojdbc %}
+Environment=ORACLE_HOME={{ tomcat_oracle_home }}
+Environment=TNS_ADMIN={{ tomcat_oracle_home }}/network/admin
+Environment=LD_LIBRARY_PATH={{ tomcat_oracle_home }}/lib
+{% endif %}
+ExecStart={{ tomcat_base_path }}/{{ tomcat_service_name }}/bin/startup.sh
+ExecStop=/bin/kill -15 $MAINPID
+
+User={{ tomcat_user }}
+Group={{ tomcat_user_group }}
+SuccessExitStatus=143
+
+LimitNOFILE=131072
+LimitNPROC=16384
+
+[Install]
+WantedBy=multi-user.target

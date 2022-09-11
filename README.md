@@ -11,7 +11,7 @@ Requirements
   * 8.0
   * 8.5
   * 9.0 (9.0.1 or later)
-* CentOS/RHEL 7
+* CentOS/RHEL 7,8,9
 * SELinux disabled
 
 Installation
@@ -88,7 +88,7 @@ Some defaults (probably not requiring tampering):
 - `tomcat_java_home`: /usr/lib/jvm/jre
 - `tomcat_downloadURL`: https://<i></i>archive.apache.org/dist
 - `tomcat_user`: tomcat
-- `tomcat_group`: tomcat
+- `tomcat_user_group`: tomcat
 - `tomcat_listen_address`: 0.0.0.0
 
 Custom templates for server.xml, users.xml, systemd service file, etc.:
@@ -111,7 +111,7 @@ Variables for ojdbc install:
 Optional variables (by default undefined):
 - You can set custom user uid and group gid for homogeneity across multiple servers. For example:
   * `tomcat_user_uid`: 500
-  * `tomcat_group_gid`: 500
+  * `tomcat_user_group_gid`: 500
 
 In case of uninstallation:
 - `tomcat_state`: absent

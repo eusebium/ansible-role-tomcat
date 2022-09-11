@@ -1,18 +1,29 @@
 ---
 # tasks file for tomcat
-- name: Stat previous tomcat path
-  stat:
-    path: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
-  register: tomcat_stat_previous_version
-  when:
-    - tomcat_upgrade | bool
-    - tomcat_state == "present"
-  tags: tomcat-upgrade
+
+- name: Check in tomcat is installed, checking if link to tomcat exists
+  ansible.builtin.stat:
+    path: "{{ tomcat_install_path_link }}"
+  register: tomcat_is_installed
+
+- name: Set previous version path
+  ansible.builtin.set_fact:
+    tomcat_previous_version_path: "{% if tomcat_is_installed.stat.lnk_source is defined %}{{ tomcat_is_installed.stat.lnk_source }}{% else %}{{ tomcat_is_installed.stat.path | default('') }}{% endif %}"
+
+# - debug:
+#     var:  tomcat_is_installed
+
+# - debug:
+#     var:  tomcat_previous_version_path
 
 - name: Install tomcat
   include: install.yml
-  when: tomcat_state == "present"
+  when:
+    - tomcat_state == "present"
+    - tomcat_previous_version_path != tomcat_install_path
   tags: tomcat-install
+
+- meta: end_play
 
 - name: Configure tomcat
   include: configure.yml
@@ -22,15 +33,35 @@
 - name: Custom configuration tomcat
   include: custom.yml
   when: tomcat_state == "present"
-  tags: tomcat-custom
+  tags: tomcat-config
 
-- name: Uninstall tomcat
-  include: uninstall.yml
-  when: tomcat_state == "absent"
+- name: Stat tomcat install path
+  stat:
+    path: "{{ tomcat_install_path }}"
+  register: tomcat_is_installed
 
 - name: Upgrade tomcat
   include: upgrade.yml
   when:
-    - tomcat_upgrade | bool
+    - tomcat_upgrade|bool
     - tomcat_state == "present"
+    - tomcat_previous_version_path != ''
+    - tomcat_previous_version_path != tomcat_install_path
   tags: tomcat-upgrade
+
+- name: Set production
+  include: set-production.yml
+  when:
+    - tomcat_set_production|bool
+    - tomcat_state == "present"
+  notify: Restart tomcat
+
+- name: Set non production
+  include: set-non-production.yml
+  when:
+    - not tomcat_set_production|bool
+    - tomcat_state == "present"
+
+- name: Uninstall tomcat
+  include: uninstall.yml
+  when: tomcat_state == "absent"

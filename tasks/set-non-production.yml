@@ -5,7 +5,7 @@
   file:
     path: "{{ tomcat_install_path }}"
     owner: "{{ tomcat_user }}"
-    group: "{{ tomcat_group }}"
+    group: "{{ tomcat_user_group }}"
     recurse: yes
 
 - name: Set directories permissions for non-production installation
