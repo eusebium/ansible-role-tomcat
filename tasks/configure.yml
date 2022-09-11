@@ -1,90 +1,112 @@
 ---
-# tasks file for tomcat
-- name: Configure temporary _server.xml_ configuration file. This one will be copied over server.xml
+- name: Install some prerequisite packages
+  ansible.builtin.package:
+    name:
+      - python3-lxml
+    state: present
+
+- name: Configure service file {{ tomcat_service_name }}.service
+  ansible.builtin.template:
+    src: "{{ tomcat_template_systemd_service }}"
+    dest: "{{ tomcat_systemd_config_path }}/{{ tomcat_service_name }}.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart tomcat
+
+- name: Enable tomcat service on startup
+  ansible.builtin.service:
+    name: "{{ tomcat_service_name }}"
+    enabled: "{{ tomcat_service_enabled_on_startup | ternary(true, false) }}"
+    daemon_reload: yes
+
+- name: Configure temporary .server.xml configuration file. This one will be copied over server.xml
   block:
     - name: Setup temp server.xml
-      template:
+      ansible.builtin.template:
         src: "{{ tomcat_template_server }}"
-        dest: "{{ tomcat_install_path }}/conf/_server.xml_"
-      changed_when: False
+        dest: "{{ tomcat_install_path }}/conf/.server.xml"
+        mode: 0600
 
-    - name: Set Engine extra conf
-      xml:
-        path: "{{ tomcat_install_path }}/conf/_server.xml_"
+    - name: Set server engine extra conf
+      ansible.builtin.xml:
+        path: "{{ tomcat_install_path }}/conf/.server.xml"
         xpath: '//Service/Engine[@name="Catalina"]'
         attribute: "{{ item.key }}"
         value: "{{ item.value }}"
       with_dict: "{{ tomcat_server_engine_extra_conf }}"
-      changed_when: False
-
-    - name: Set AJP connector extra conf
-      xml:
-        path: "{{ tomcat_install_path }}/conf/_server.xml_"
-        xpath: '//Service/Connector[@protocol="AJP/1.3"]'
-        attribute: "{{ item.key }}"
-        value: "{{ item.value }}"
-      with_dict: "{{ tomcat_server_ajp_extra_conf }}"
-      changed_when: False
 
     - name: Set HTTP connector extra conf
-      xml:
-        path: "{{ tomcat_install_path }}/conf/_server.xml_"
+      ansible.builtin.xml:
+        path: "{{ tomcat_install_path }}/conf/.server.xml"
         xpath: '//Service/Connector[@protocol="HTTP/1.1"]'
         attribute: "{{ item.key }}"
         value: "{{ item.value }}"
       with_dict: "{{ tomcat_server_http_extra_conf }}"
-      changed_when: False
+
+    - name: Set AJP connector extra conf
+      ansible.builtin.xml:
+        path: "{{ tomcat_install_path }}/conf/.server.xml"
+        xpath: '//Service/Connector[@protocol="AJP/1.3"]'
+        attribute: "{{ item.key }}"
+        value: "{{ item.value }}"
+      with_dict: "{{ tomcat_server_ajp_extra_conf }}"
+      when:
+        - tomcat_ajp_enabled
 
     - name: Copy temp server.xml
-      copy:
-        src: "{{ tomcat_install_path }}/conf/_server.xml_"
+      ansible.builtin.copy:
+        src: "{{ tomcat_install_path }}/conf/.server.xml"
         dest: "{{ tomcat_install_path }}/conf/server.xml"
         remote_src: yes
         force: yes
+        mode: preserve
       notify: Restart tomcat
 
-    - name: Remove temp server.xml
-      file:
-        path: "{{ tomcat_install_path }}/conf/_server.xml_"
-        state: absent
-      changed_when: False
+- name: Get roles from users roles
+  ansible.builtin.set_fact:
+    tomcat_users_roles: "{{ tomcat_users | map(attribute='roles') | list }}"
 
-- name: Set fact of user roles to be enabled
-  set_fact:
-    tomcat_user_roles: "{{ (tomcat_user_roles + item.roles.split(',')|list)|unique }}"
-  with_items:
-    - "{{ tomcat_users }}"
+- name: Set all roles to be created
+  ansible.builtin.set_fact:
+    tomcat_user_roles: "{{ (tomcat_user_roles + tomcat_users_roles) | unique }}"
 
 - name: Setup tomcat-users.xml
-  template:
+  ansible.builtin.template:
     src: "{{ tomcat_template_users }}"
     dest: "{{ tomcat_install_path }}/conf/tomcat-users.xml"
+    mode: preserve
   notify: Restart tomcat
 
 - name: Stat Manager app
-  stat:
+  ansible.builtin.stat:
     path: "{{ tomcat_install_path }}/webapps/manager/META-INF/context.xml"
   register: tomcat_stat_manager
 
 - name: Configure access to Manager app (from localhost only or from anywhere)
-  template:
+  ansible.builtin.template:
     src: "{{ tomcat_template_manager_context }}"
     dest: "{{ tomcat_install_path }}/webapps/manager/META-INF/context.xml"
+    mode: preserve
   notify: Restart tomcat
-  when: tomcat_stat_manager.stat.exists|bool
+  when:
+    - tomcat_stat_manager.stat.exists
 
 - name: Stat Host Manager
-  stat:
+  ansible.builtin.stat:
     path: "{{ tomcat_install_path }}/webapps/host-manager/META-INF/context.xml"
   register: tomcat_stat_host_manager
 
 - name: Configure access to Host Manager (from localhost only or from anywhere)
-  template:
+  ansible.builtin.template:
     src: "{{ tomcat_template_host_manager_context }}"
     dest: "{{ tomcat_install_path }}/webapps/host-manager/META-INF/context.xml"
+    mode: preserve
   notify: Restart tomcat
+
 - name: Configure setenv.sh
-  template:
+  ansible.builtin.template:
     src: "{{ tomcat_template_setenv }}"
-    dest: "{{ tomcat_install_path }}/{{ tomcat_service_name }}/bin/setenv.sh"
+    dest: "{{ tomcat_install_path }}/bin/setenv.sh"
+    mode: preserve
   notify: Restart tomcat

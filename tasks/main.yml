@@ -1,6 +1,4 @@
 ---
-# tasks file for tomcat
-
 - name: Check in tomcat is installed, checking if link to tomcat exists
   ansible.builtin.stat:
     path: "{{ tomcat_install_path_link }}"
@@ -8,32 +6,30 @@
 
 - name: Set previous version path
   ansible.builtin.set_fact:
-    tomcat_previous_version_path: "{% if tomcat_is_installed.stat.lnk_source is defined %}{{ tomcat_is_installed.stat.lnk_source }}{% else %}{{ tomcat_is_installed.stat.path | default('') }}{% endif %}"
+    tomcat_previous_version_path: "{{ tomcat_is_installed.stat.lnk_source is defined | ternary(tomcat_is_installed.stat.lnk_source, tomcat_is_installed.stat.path | default('')) }}"
 
-# - debug:
-#     var:  tomcat_is_installed
-
-# - debug:
-#     var:  tomcat_previous_version_path
+- name: Install Java
+  ansible.builtin.package:
+    name: "{{ tomcat_java_packages }}"
+    state: present
+  when: tomcat_install_java
+  notify: Restart tomcat
 
 - name: Install tomcat
-  include: install.yml
+  ansible.builtin.import_tasks: install.yml
   when:
     - tomcat_state == "present"
     - tomcat_previous_version_path != tomcat_install_path
-  tags: tomcat-install
-
-- meta: end_play
+  tags:
+    - tomcat-install
 
 - name: Configure tomcat
-  include: configure.yml
+  ansible.builtin.import_tasks: configure.yml
   when: tomcat_state == "present"
-  tags: tomcat-config
+  tags:
+    - tomcat-config
 
-- name: Custom configuration tomcat
-  include: custom.yml
-  when: tomcat_state == "present"
-  tags: tomcat-config
+- meta: end_play
 
 - name: Stat tomcat install path
   stat:

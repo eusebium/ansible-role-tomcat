@@ -2,17 +2,11 @@
 - name: Get services
   ansible.builtin.service_facts:
 
-- name: Stop old tomcat if upgrading?
+- name: Stop tomcat if changing version
   ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
     state: stopped
   when: ansible_facts.services[tomcat_service_name + '.service'] is defined
-
-- name: Install Java
-  ansible.builtin.package:
-    name: "{{ tomcat_java_packages }}"
-    state: present
-  when: tomcat_install_java
 
 - name: Create group {{ tomcat_user_group }}
   ansible.builtin.group:
@@ -54,23 +48,7 @@
     creates: "{{ tomcat_install_path }}"
     extra_opts:
       - --transform
-      - s#apache-tomcat-{{ tomcat_version }}#{{ (tomcat_instance_prefix | length > 0) | ternary(tomcat_instance_prefix | lower + '-', '') + 'apache-tomcat-' + tomcat_version }}#
-  register: tomcat_installed
-
-- name: Configure service file {{ tomcat_service_name }}.service
-  ansible.builtin.template:
-    src: "{{ tomcat_template_systemd_service }}"
-    dest: "{{ tomcat_systemd_config_path }}/{{ tomcat_service_name }}.service"
-    owner: root
-    group: root
-    mode: 0644
-  notify: Restart tomcat
-
-- name: Enable tomcat service on startup
-  ansible.builtin.service:
-    name: "{{ tomcat_service_name }}"
-    enabled: "{{ tomcat_service_enabled_on_startup | ternary(true, false) }}"
-    daemon_reload: yes
+      - s#apache-tomcat-{{ tomcat_version }}#{{ _tomcat_instance_prefix + 'apache-tomcat-' + tomcat_version }}#
 
 - name: Create symlink {{ tomcat_install_path }} to {{ tomcat_base_path }}/{{ tomcat_service_name }}
   ansible.builtin.file:

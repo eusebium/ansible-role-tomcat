@@ -62,16 +62,11 @@
   register: find_chmod_result
   changed_when: 'find_chmod_result.stdout | length > 0'
 
-- name: Delete manager application
-  file:
+- name: Remove default webapps
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}/webapps/{{ item }}"
     state: absent
-  loop:
-    - ROOT
-    - examples
-    - manager
-    - host-manager
-    - docs
+  loop: "{{ tomcat_webapps_default_remove }}"
 
 - name: Create /var/log/{{ tomcat_service_name }} directory
   file:

@@ -1,6 +1,4 @@
 ---
-# handlers file for tomcat
-
 - name: Restart tomcat
   ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
