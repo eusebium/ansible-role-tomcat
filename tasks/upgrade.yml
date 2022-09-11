@@ -1,13 +1,13 @@
 ---
 - name: Find conf in old tomcat path
-  find:
+  ansible.builtin.find:
     paths:
       - "{{ tomcat_previous_version_path }}/conf"
     file_type: any
-  register: tomcat_upgrade_from_conf
+  register: tomcat_upgrade_migrate_conf
 
 - name: Copy conf from old to new - no force
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ tomcat_install_path }}/conf/"
     remote_src: yes
@@ -15,11 +15,11 @@
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: no
-  loop: "{{ tomcat_upgrade_from_conf.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_upgrade_migrate_conf.files | map(attribute='path') | list }}"
   notify: Restart tomcat
 
 - name: Copy conf from old to new - force
-  copy:
+  ansible.builtin.copy:
     src: "{{ tomcat_previous_version_path }}/conf/{{ item }}"
     dest: "{{ tomcat_install_path }}/conf/"
     remote_src: yes
@@ -27,18 +27,18 @@
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: yes
-  loop: "{{ tomcat_upgrade_conf_copy_force }}"
+  loop: "{{ tomcat_upgrade_migrate_conf_force }}"
   notify: Restart tomcat
 
 - name: Find lib in old tomcat path
-  find:
+  ansible.builtin.find:
     paths:
       - "{{ tomcat_previous_version_path }}/lib"
     file_type: any
-  register: tomcat_upgrade_from_lib
+  register: tomcat_upgrade_migrate_lib
 
 - name: Copy lib from old to new - no force
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ tomcat_install_path }}/lib/"
     remote_src: yes
@@ -46,56 +46,56 @@
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: no
-  loop: "{{ tomcat_upgrade_from_lib.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_upgrade_migrate_lib.files | map(attribute='path') | list }}"
   notify: Restart tomcat
 
 - name: Find deployed webapps
-  find:
+  ansible.builtin.find:
     paths:
       - "{{ tomcat_previous_version_path }}/webapps"
-    file_type: file
-  register: tomcat_upgrade_from_webapps
+    file_type: any
+  register: tomcat_upgrade_migrate_webapps
 
 - name: Copy webapps from old to new
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ tomcat_install_path }}/webapps/"
     remote_src: yes
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
-  loop: "{{ tomcat_upgrade_from_webapps.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_upgrade_migrate_webapps.files | map(attribute='path') | list }}"
 
 - name: Find extra folders in old
-  find:
+  ansible.builtin.find:
     paths: "{{ tomcat_previous_version_path }}"
     file_type: directory
-  register: tomcat_upgrade_extra_folders_old
+  register: tomcat_upgrade_folders_old
 
 - name: Find extra folders in new
-  find:
+  ansible.builtin.find:
     paths: "{{ tomcat_install_path }}"
     file_type: directory
-  register: tomcat_upgrade_extra_folders_new
+  register: tomcat_upgrade_folders_new
 
 - name: Set difference for extra config folders
-  set_fact:
-    tomcat_upgrade_extra_folders_diff: "{{ tomcat_upgrade_extra_folders_old.files|map(attribute='path')|map('regex_replace','.*/','')|list|difference(tomcat_upgrade_extra_folders_new.files|map(attribute='path')|map('regex_replace','.*/','')|list) }}"
+  ansible.builtin.set_fact:
+    tomcat_upgrade_migrate_extra_folders: "{{ tomcat_upgrade_folders_old.files | map(attribute='path') | map('regex_replace', '.*/', '') | list | difference(tomcat_upgrade_folders_new.files | map(attribute='path') | map('regex_replace', '.*/', '') | list) }}"
 
 - name: Copy extra folders from old to new
-  copy:
+  ansible.builtin.copy:
     src: "{{ tomcat_previous_version_path + '/' + item }}"
     dest: "{{ tomcat_install_path }}/"
     remote_src: yes
     owner: root
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
-  loop: "{{ tomcat_upgrade_extra_folders_diff }}"
+  loop: "{{ tomcat_upgrade_migrate_extra_folders }}"
 
 - name: Backup/Archive old path
   block:
     - name: Archive old path
-      archive:
+      ansible.builtin.archive:
         path: "{{ tomcat_previous_version_path }}"
         dest: "{{ tomcat_previous_version_path }}.tgz"
         owner: root
@@ -103,7 +103,8 @@
         mode: o-rwx
 
     - name: Remove old path
-      file:
+      ansible.builtin.file:
         path: "{{ tomcat_previous_version_path }}"
         state: absent
-  when: tomcat_upgrade_archive_old_path|bool
+  when:
+    - tomcat_upgrade_archive_old_path

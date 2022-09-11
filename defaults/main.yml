@@ -93,9 +93,9 @@ tomcat_uninstall_remove_java: False
 tomcat_uninstall_remove_all: False
 
 # Upgrade tomcat default parameters
-tomcat_upgrade: False
+tomcat_upgrade: false
 tomcat_upgrade_from_path: /usr/apache-tomcat-8.5.42
-tomcat_upgrade_conf_copy_force:
+tomcat_upgrade_migrate_conf_force:
   - context.xml
   - server.xml
 tomcat_upgrade_archive_old_path: true

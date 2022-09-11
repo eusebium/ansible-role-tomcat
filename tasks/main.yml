@@ -29,21 +29,23 @@
   tags:
     - tomcat-config
 
-- meta: end_play
-
 - name: Stat tomcat install path
-  stat:
+  ansible.builtin.stat:
     path: "{{ tomcat_install_path }}"
   register: tomcat_is_installed
 
 - name: Upgrade tomcat
-  include: upgrade.yml
+  ansible.builtin.import_tasks: upgrade.yml
   when:
-    - tomcat_upgrade|bool
+    - tomcat_upgrade
     - tomcat_state == "present"
     - tomcat_previous_version_path != ''
     - tomcat_previous_version_path != tomcat_install_path
   tags: tomcat-upgrade
+
+
+
+- meta: end_play
 
 - name: Set production
   include: set-production.yml
