@@ -1,66 +1,86 @@
 ---
 # tasks file for tomcat
 - name: Create directory for ServerInfo.properties
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}/lib/org/apache/catalina/util"
+    owner: root
+    group: "{{ tomcat_user_group }}"
+    mode: "2750"
     state: directory
 
 - name: Remove version string from HTTP error messages
-  copy:
+  ansible.builtin.copy:
     content: |
       server.info=
       server.number=
     dest: "{{ tomcat_install_path }}/lib/org/apache/catalina/util/ServerInfo.properties"
+    owner: root
+    group: "{{ tomcat_user_group }}"
+    mode: 0640
   notify: Restart tomcat
 
 - name: Set root directory owner/group for production installation
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}"
     owner: root
     group: "{{ tomcat_user_group }}"
 
 - name: Set recursively directories owner/group for production installation
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}/{{ item }}"
     owner: root
     group: "{{ tomcat_user_group }}"
     recurse: yes
-  with_items:
+  loop:
     - bin
     - conf
     - lib
 
 - name: Set recursively directories owner/group for production installation
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}/{{ item }}"
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_user_group }}"
     recurse: yes
-  with_items:
+  loop:
     - temp
     - work
 
 - name: Set recursively webapps directory owner/group for production installation
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}/webapps"
-    owner: "{% if tomcat_webapps_auto_deployment %}{{ tomcat_user }}{% else %}root{% endif %}"
+    owner: "{{ tomcat_webapps_auto_deployment | ternary(tomcat_user, 'root') }}"
     group: "{{ tomcat_user_group }}"
     recurse: yes
 
-- name: Set directories permissions for production installation
-  command: find {{ tomcat_install_path }} -type d -exec chmod -c 2750 {} \;
+- name: Set directories permissions for production installation 2750
+  ansible.builtin.command: find {{ tomcat_install_path }}/{{ item }} -type d -exec chmod -c 2750 {} \;
+  loop:
+    - bin
+    - conf
+    - lib
   register: find_chmod_result
-  changed_when: 'find_chmod_result.stdout | length > 0'
+  changed_when: find_chmod_result.stdout | length > 0
 
-- name: Set files permissions for production installation (1/2)
-  command: find {{ tomcat_install_path }} -type f -not -name "*.sh" -exec chmod -c 0640 {} \;
+- name: Set directories permissions for production installation 0750
+  ansible.builtin.command: find {{ tomcat_install_path }}/{{ item }} -type d -exec chmod -c 0750 {} \;
+  loop:
+    - temp
+    - work
+    - logs
+    - webapps
   register: find_chmod_result
-  changed_when: 'find_chmod_result.stdout | length > 0'
+  changed_when: find_chmod_result.stdout | length > 0
 
-- name: Set files permissions for production installation (2/2)
-  command: find {{ tomcat_install_path }} -type f -name "*.sh" -exec chmod -c 0750 {} \;
+- name: Set files permissions for production installation exclude scripts
+  ansible.builtin.command: find {{ tomcat_install_path }} -type f -not -name "*.sh" -exec chmod -c 0640 {} \;
   register: find_chmod_result
-  changed_when: 'find_chmod_result.stdout | length > 0'
+  changed_when: find_chmod_result.stdout | length > 0
+
+- name: Set files permissions for production installation script files
+  ansible.builtin.command: find {{ tomcat_install_path }}/bin -type f -name "*.sh" -exec chmod -c 0750 {} \;
+  register: find_chmod_result
+  changed_when: find_chmod_result.stdout | length > 0
 
 - name: Remove default webapps
   ansible.builtin.file:
@@ -69,7 +89,7 @@
   loop: "{{ tomcat_webapps_default_remove }}"
 
 - name: Create /var/log/{{ tomcat_service_name }} directory
-  file:
+  ansible.builtin.file:
     path: /var/log/{{ tomcat_service_name }}
     state: directory
     owner: "{{ tomcat_user }}"
@@ -77,27 +97,28 @@
     mode: 0750
 
 - name: Stat original logs directory
-  stat:
+  ansible.builtin.stat:
     path: "{{ tomcat_install_path }}/logs"
   register: tomcat_stat_original_logs_path
 
 - name: Copy logs to new logs directory
-  copy:
+  ansible.builtin.copy:
     src: "{{ tomcat_install_path }}/logs/"
     dest: /var/log/{{ tomcat_service_name }}/
     remote_src: yes
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_user_group }}"
-  when: tomcat_stat_original_logs_path.stat.isdir|bool
+    mode: preserve
+  when: tomcat_stat_original_logs_path.stat.isdir
 
 - name: Remove original logs directory
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}/logs/"
     state: absent
-  when: tomcat_stat_original_logs_path.stat.isdir|bool
+  when: tomcat_stat_original_logs_path.stat.isdir
 
 - name: Create link to new log directory
-  file:
+  ansible.builtin.file:
     src: /var/log/{{ tomcat_service_name }}
     dest: "{{ tomcat_install_path }}/logs"
     state: link

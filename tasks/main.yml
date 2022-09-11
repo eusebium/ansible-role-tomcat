@@ -43,23 +43,19 @@
     - tomcat_previous_version_path != tomcat_install_path
   tags: tomcat-upgrade
 
-
-
-- meta: end_play
-
 - name: Set production
-  include: set-production.yml
+  ansible.builtin.import_tasks: set-production.yml
   when:
-    - tomcat_set_production|bool
+    - tomcat_set_production
     - tomcat_state == "present"
   notify: Restart tomcat
 
 - name: Set non production
-  include: set-non-production.yml
+  ansible.builtin.import_tasks: set-non-production.yml
   when:
-    - not tomcat_set_production|bool
+    - not tomcat_set_production
     - tomcat_state == "present"
 
 - name: Uninstall tomcat
-  include: uninstall.yml
+  ansible.builtin.import_tasks: uninstall.yml
   when: tomcat_state == "absent"
