@@ -38,6 +38,14 @@
     mode: 0640
     timeout: 120
 
+- name: Ensure tomcat_base_path {{ tomcat_base_path }} exists
+  ansible.builtin.file:
+    path: "{{ tomcat_base_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
 - name: Unarchive apache-tomcat-{{ tomcat_version }}.tar.gz to {{ tomcat_install_path }}
   ansible.builtin.unarchive:
     src: "{{ tomcat_tempdir.path }}/apache-tomcat-{{ tomcat_version }}.tar.gz"

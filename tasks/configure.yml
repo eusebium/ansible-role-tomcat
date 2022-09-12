@@ -26,7 +26,8 @@
       ansible.builtin.template:
         src: "{{ tomcat_template_server }}"
         dest: "{{ tomcat_install_path }}/conf/.server.xml"
-        mode: 0600
+        mode: 0640
+      changed_when: false
 
     - name: Set server engine extra conf
       ansible.builtin.xml:
@@ -35,6 +36,7 @@
         attribute: "{{ item.key }}"
         value: "{{ item.value }}"
       with_dict: "{{ tomcat_server_engine_extra_conf }}"
+      changed_when: false
 
     - name: Set HTTP connector extra conf
       ansible.builtin.xml:
@@ -43,6 +45,7 @@
         attribute: "{{ item.key }}"
         value: "{{ item.value }}"
       with_dict: "{{ tomcat_server_http_extra_conf }}"
+      changed_when: false
 
     - name: Set AJP connector extra conf
       ansible.builtin.xml:
@@ -53,6 +56,7 @@
       with_dict: "{{ tomcat_server_ajp_extra_conf }}"
       when:
         - tomcat_ajp_enabled
+      changed_when: false
 
     - name: Copy temp server.xml
       ansible.builtin.copy:
@@ -75,40 +79,52 @@
   ansible.builtin.template:
     src: "{{ tomcat_template_users }}"
     dest: "{{ tomcat_install_path }}/conf/tomcat-users.xml"
-    mode: preserve
+    mode: 0640
   notify: Restart tomcat
-
-- name: Stat Manager app
-  ansible.builtin.stat:
-    path: "{{ tomcat_install_path }}/webapps/manager/META-INF/context.xml"
-  register: tomcat_stat_manager
-
-- name: Configure access to Manager app (from localhost only or from anywhere)
-  ansible.builtin.template:
-    src: "{{ tomcat_template_manager_context }}"
-    dest: "{{ tomcat_install_path }}/webapps/manager/META-INF/context.xml"
-    mode: preserve
-  notify: Restart tomcat
-  when:
-    - tomcat_stat_manager.stat.exists
-
-- name: Stat Host Manager
-  ansible.builtin.stat:
-    path: "{{ tomcat_install_path }}/webapps/host-manager/META-INF/context.xml"
-  register: tomcat_stat_host_manager
-
-- name: Configure access to Host Manager (from localhost only or from anywhere)
-  ansible.builtin.template:
-    src: "{{ tomcat_template_host_manager_context }}"
-    dest: "{{ tomcat_install_path }}/webapps/host-manager/META-INF/context.xml"
-    mode: preserve
-  notify: Restart tomcat
-  when:
-    - tomcat_stat_host_manager.stat.exists
 
 - name: Configure setenv.sh
   ansible.builtin.template:
     src: "{{ tomcat_template_setenv }}"
     dest: "{{ tomcat_install_path }}/bin/setenv.sh"
-    mode: preserve
+    mode: 0750
+  notify: Restart tomcat
+
+- name: Create /var/log/{{ tomcat_service_name }} directory
+  ansible.builtin.file:
+    path: /var/log/{{ tomcat_service_name }}
+    state: directory
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_user_group }}"
+    mode: 0750
+
+- name: Set logs directory in /var/log
+  block:
+    - name: Stat original logs directory
+      ansible.builtin.stat:
+        path: "{{ tomcat_install_path }}/logs"
+      register: tomcat_stat_original_logs_path
+
+    - name: Copy logs to new logs directory
+      ansible.builtin.copy:
+        src: "{{ tomcat_install_path }}/logs/"
+        dest: /var/log/{{ tomcat_service_name }}/
+        remote_src: yes
+        owner: "{{ tomcat_user }}"
+        group: "{{ tomcat_user_group }}"
+        mode: 0750
+      when:
+        - tomcat_stat_original_logs_path.stat.isdir
+
+    - name: Remove original logs directory
+      ansible.builtin.file:
+        path: "{{ tomcat_install_path }}/logs/"
+        state: absent
+      when:
+        - tomcat_stat_original_logs_path.stat.isdir
+
+    - name: Create link to new log directory
+      ansible.builtin.file:
+        src: /var/log/{{ tomcat_service_name }}
+        dest: "{{ tomcat_install_path }}/logs"
+        state: link
   notify: Restart tomcat

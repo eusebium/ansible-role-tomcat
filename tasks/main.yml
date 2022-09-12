@@ -43,18 +43,11 @@
     - tomcat_previous_version_path != tomcat_install_path
   tags: tomcat-upgrade
 
-- name: Set production
-  ansible.builtin.import_tasks: set-production.yml
+- name: Set hardening
+  ansible.builtin.import_tasks: hardening.yml
   when:
-    - tomcat_set_production
     - tomcat_state == "present"
   notify: Restart tomcat
-
-- name: Set non production
-  ansible.builtin.import_tasks: set-non-production.yml
-  when:
-    - not tomcat_set_production
-    - tomcat_state == "present"
 
 - name: Uninstall tomcat
   ansible.builtin.import_tasks: uninstall.yml

@@ -28,11 +28,11 @@ tomcat_base_path: /opt
 tomcat_install_path: "{{ tomcat_base_path }}/{{ _tomcat_instance_prefix + 'apache-tomcat-' + tomcat_version }}"
 tomcat_install_path_link: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
 
+tomcat_template_server: "tomcat-server-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 tomcat_template_manager_context: "manager-context.xml.j2"
 tomcat_template_host_manager_context: "host-manager-context.xml.j2"
 tomcat_template_systemd_service: "tomcat.service.j2"
 tomcat_template_setenv: "tomcat.setenv.sh.j2"
-tomcat_template_server: "tomcat-server-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 tomcat_template_users: "tomcat-users-{{ '.'.join(tomcat_version.split('.')[:2]) }}.xml.j2"
 
 tomcat_listen_address: 0.0.0.0
@@ -66,7 +66,6 @@ tomcat_server_http_extra_conf: {}
 
 tomcat_server_ajp_extra_conf: {}
 
-tomcat_set_production: true
 tomcat_webapps_auto_deployment: true
 
 tomcat_webapps_default_remove:
@@ -76,8 +75,9 @@ tomcat_webapps_default_remove:
   - docs
   # - manager
 
-tomcat_allow_manager_access_only_from_localhost: False
-tomcat_allow_host_manager_access_only_from_localhost: False
+# TODO allow only from some ips and/or specific virtualhost, possibily in SSL
+tomcat_allow_manager_access_only_from_localhost: false
+tomcat_allow_host_manager_access_only_from_localhost: false
 
 tomcat_users: []
 
@@ -85,12 +85,11 @@ tomcat_user_roles: []
 
 # Uninstall default parameters
 tomcat_uninstall_create_backup: true
+tomcat_uninstall_remove_user: false
+tomcat_uninstall_remove_group: false
+tomcat_uninstall_remove_java: false
 
-tomcat_uninstall_remove_user: False
-tomcat_uninstall_remove_group: False
-tomcat_uninstall_remove_java: False
-
-tomcat_uninstall_remove_all: False
+tomcat_uninstall_remove_all: false
 
 # Upgrade tomcat default parameters
 tomcat_upgrade: false
