@@ -28,8 +28,6 @@ Example Playbook
   vars:
     tomcat_version: 8.5.23
 
-    tomcat_set_production: True
-
     tomcat_users:
       - username: "tomcat"
         password: "t3mpp@ssw0rd"
@@ -66,10 +64,6 @@ If set to "True", tomcat host manager app will be accessible only from localhost
 Change it to "True" in order to configure tomcat to allow remote debugging. Default debug port is set to tcp/8000 (you can change it through the corresponding variable).
 
 File permissions:
-- `tomcat_set_production`: False
-For production installation, set this variable to "True" for more strict security. For development or low-security/more-ease installation, set this variable to "False". Default is "True".
-  * If set to "True", all tomcat files are owned by root with group tomcat. Owner has read/write privileges, group only has read and world has no permissions. The exceptions are the logs, temp and work directory that are owned by the tomcat user rather than root. Log folder is moved to /var/log, default tomcat webapps are removed. Removed version string from HTTP error messages
-  * If set to "False", all tomcat files are owned by tomcat with group tomcat. Owner and group has read/write privileges and world only has read permissions.
 - `tomcat_webapps_auto_deployment`: True
 For better security, auto-deployment should be disabled and web applications should be deployed as exploded directories. If auto-deployment is disabled, set this to "False". This variable makes sense only for production installation (if tomcat_set_production is "True"). Default is "True".
   * If set to "True", webapps subdirectory is owned by tomcat with group tomcat.

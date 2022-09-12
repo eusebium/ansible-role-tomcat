@@ -1,12 +1,10 @@
 ---
-- name: Get services
-  ansible.builtin.service_facts:
-
 - name: Stop tomcat if changing version
   ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
     state: stopped
-  when: ansible_facts.services[tomcat_service_name + '.service'] is defined
+  when:
+    - ansible_facts.services[tomcat_service_name + '.service'] is defined
 
 - name: Create group {{ tomcat_user_group }}
   ansible.builtin.group:
@@ -51,9 +49,10 @@
     src: "{{ tomcat_tempdir.path }}/apache-tomcat-{{ tomcat_version }}.tar.gz"
     dest: "{{ tomcat_base_path }}"
     remote_src: true
-    owner: "{{ tomcat_set_production | ternary('root', tomcat_user) }}"
+    owner: root
     group: "{{ tomcat_user_group }}"
     creates: "{{ tomcat_install_path }}"
+    mode: 0750
     extra_opts:
       - --transform
       - s#apache-tomcat-{{ tomcat_version }}#{{ _tomcat_instance_prefix + 'apache-tomcat-' + tomcat_version }}#

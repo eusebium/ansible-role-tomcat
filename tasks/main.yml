@@ -1,4 +1,7 @@
 ---
+- name: Get services
+  ansible.builtin.service_facts:
+
 - name: Check in tomcat is installed, checking if link to tomcat exists
   ansible.builtin.stat:
     path: "{{ tomcat_install_path_link }}"
@@ -34,14 +37,14 @@
     path: "{{ tomcat_install_path }}"
   register: tomcat_is_installed
 
-- name: Upgrade tomcat
-  ansible.builtin.import_tasks: upgrade.yml
+- name: Migrate old tomcat
+  ansible.builtin.import_tasks: migrate.yml
   when:
-    - tomcat_upgrade
+    - tomcat_migrate
     - tomcat_state == "present"
-    - tomcat_previous_version_path != ''
+    - tomcat_previous_version_path | length > 0 or tomcat_migrate_from_path | length > 0
     - tomcat_previous_version_path != tomcat_install_path
-  tags: tomcat-upgrade
+  tags: tomcat-migrate
 
 - name: Set hardening
   ansible.builtin.import_tasks: hardening.yml
@@ -51,4 +54,5 @@
 
 - name: Uninstall tomcat
   ansible.builtin.import_tasks: uninstall.yml
-  when: tomcat_state == "absent"
+  when:
+    - tomcat_state == "absent"

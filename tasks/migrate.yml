@@ -1,10 +1,24 @@
 ---
+- name: Set path from wich to migrate
+  ansible.builtin.set_fact:
+    tomcat_previous_version_path: "{{ tomcat_migrate_from_path }}"
+  when:
+    - tomcat_previous_version_path | length < 1
+
+- name: Stop old service
+  ansible.builtin.service:
+    name: "{{ tomcat_migrate_service_name }}"
+    state: stopped
+  when:
+    - tomcat_migrate_service_name | length > 0
+    - ansible_facts.services[tomcat_migrate_service_name + '.service'] is defined
+
 - name: Find conf in old tomcat path
   ansible.builtin.find:
     paths:
       - "{{ tomcat_previous_version_path }}/conf"
     file_type: any
-  register: tomcat_upgrade_migrate_conf
+  register: tomcat_migrate_conf
 
 - name: Copy conf from old to new - no force
   ansible.builtin.copy:
@@ -15,7 +29,7 @@
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: no
-  loop: "{{ tomcat_upgrade_migrate_conf.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_migrate_conf.files | map(attribute='path') | list }}"
   notify: Restart tomcat
 
 - name: Copy conf from old to new - force
@@ -27,7 +41,7 @@
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: yes
-  loop: "{{ tomcat_upgrade_migrate_conf_force }}"
+  loop: "{{ tomcat_migrate_conf_force }}"
   notify: Restart tomcat
 
 - name: Find lib in old tomcat path
@@ -35,7 +49,7 @@
     paths:
       - "{{ tomcat_previous_version_path }}/lib"
     file_type: any
-  register: tomcat_upgrade_migrate_lib
+  register: tomcat_migrate_lib
 
 - name: Copy lib from old to new - no force
   ansible.builtin.copy:
@@ -46,7 +60,7 @@
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
     force: no
-  loop: "{{ tomcat_upgrade_migrate_lib.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_migrate_lib.files | map(attribute='path') | list }}"
   notify: Restart tomcat
 
 - name: Find deployed webapps
@@ -54,7 +68,7 @@
     paths:
       - "{{ tomcat_previous_version_path }}/webapps"
     file_type: any
-  register: tomcat_upgrade_migrate_webapps
+  register: tomcat_migrate_webapps
 
 - name: Copy webapps from old to new
   ansible.builtin.copy:
@@ -64,23 +78,23 @@
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
-  loop: "{{ tomcat_upgrade_migrate_webapps.files | map(attribute='path') | list }}"
+  loop: "{{ tomcat_migrate_webapps.files | map(attribute='path') | list }}"
 
 - name: Find extra folders in old
   ansible.builtin.find:
     paths: "{{ tomcat_previous_version_path }}"
     file_type: directory
-  register: tomcat_upgrade_folders_old
+  register: tomcat_migrate_folders_old
 
 - name: Find extra folders in new
   ansible.builtin.find:
     paths: "{{ tomcat_install_path }}"
     file_type: directory
-  register: tomcat_upgrade_folders_new
+  register: tomcat_migrate_folders_new
 
 - name: Set difference for extra config folders
   ansible.builtin.set_fact:
-    tomcat_upgrade_migrate_extra_folders: "{{ tomcat_upgrade_folders_old.files | map(attribute='path') | map('regex_replace', '.*/', '') | list | difference(tomcat_upgrade_folders_new.files | map(attribute='path') | map('regex_replace', '.*/', '') | list) }}"
+    tomcat_migrate_extra_folders: "{{ tomcat_migrate_folders_old.files | map(attribute='path') | map('regex_replace', '.*/', '') | list | difference(tomcat_migrate_folders_new.files | map(attribute='path') | map('regex_replace', '.*/', '') | list) }}"
 
 - name: Copy extra folders from old to new
   ansible.builtin.copy:
@@ -90,7 +104,7 @@
     owner: root
     group: "{{ tomcat_user_group }}"
     mode: o-rwx
-  loop: "{{ tomcat_upgrade_migrate_extra_folders }}"
+  loop: "{{ tomcat_migrate_extra_folders }}"
 
 - name: Backup/Archive old path
   block:
@@ -107,4 +121,4 @@
         path: "{{ tomcat_previous_version_path }}"
         state: absent
   when:
-    - tomcat_upgrade_archive_old_path
+    - tomcat_migrate_archive_old_path

@@ -76,8 +76,8 @@ tomcat_webapps_default_remove:
   # - manager
 
 # TODO allow only from some ips and/or specific virtualhost, possibily in SSL
-tomcat_allow_manager_access_only_from_localhost: false
-tomcat_allow_host_manager_access_only_from_localhost: false
+tomcat_allow_manager_access_only_from_localhost: true
+tomcat_allow_host_manager_access_only_from_localhost: true
 
 tomcat_users: []
 
@@ -92,9 +92,10 @@ tomcat_uninstall_remove_java: false
 tomcat_uninstall_remove_all: false
 
 # Upgrade tomcat default parameters
-tomcat_upgrade: false
-tomcat_upgrade_from_path: /usr/apache-tomcat-8.5.42
-tomcat_upgrade_migrate_conf_force:
-  - context.xml
-  - server.xml
-tomcat_upgrade_archive_old_path: true
+tomcat_migrate: true
+tomcat_migrate_service_name: tomcat
+tomcat_migrate_from_path: /usr/apache-tomcat-8.5.42
+tomcat_migrate_conf_force: []
+  # - context.xml
+  # - server.xml
+tomcat_migrate_archive_old_path: true
