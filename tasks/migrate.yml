@@ -1,10 +1,4 @@
 ---
-- name: Set path from wich to migrate
-  ansible.builtin.set_fact:
-    tomcat_previous_version_path: "{{ tomcat_migrate_from_path }}"
-  when:
-    - tomcat_previous_version_path | length < 1
-
 - name: Stop old service
   ansible.builtin.service:
     name: "{{ tomcat_migrate_service_name }}"

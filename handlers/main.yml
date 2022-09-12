@@ -1,9 +1,12 @@
 ---
+- name: Reload systemd daemon
+  ansible.builtin.service:
+    daemon_reload: yes
+
 - name: Restart tomcat
   ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
     state: restarted
-    daemon_reload: yes
 
 - name: Remove tomcat tempdir
   ansible.builtin.file:

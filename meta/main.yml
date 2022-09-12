@@ -9,5 +9,7 @@ galaxy_info:
     - name: EL
       versions:
         - 7
+        - 8
+        - 9
   galaxy_tags: [java, web, system, tomcat]
 dependencies: []

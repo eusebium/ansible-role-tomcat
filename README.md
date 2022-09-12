@@ -37,6 +37,33 @@ Example Playbook
         roles: "tomcat"
   roles:
     - role: eusebium.tomcat
+
+---
+
+- hosts: all
+  become: true
+  vars:
+    tomcat_instance_prefix: C30-backend
+    tomcat_java_version: 11
+    tomcat_version: 9.0.65
+    tomcat_port_ajp: 8009
+    tomcat_port_connector: 8080
+
+  roles:
+    - eusebium.tomcat
+
+- hosts: all
+  become: true
+  vars:
+    tomcat_instance_prefix: C30-frontend
+    tomcat_java_version: 11
+    tomcat_version: 9.0.65
+    tomcat_port_ajp: 8010
+    tomcat_port_connector: 8081
+
+  roles:
+    - eusebium.tomcat
+
 ```
 
 Role Variables

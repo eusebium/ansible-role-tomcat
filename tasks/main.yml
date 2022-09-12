@@ -2,7 +2,15 @@
 - name: Get services
   ansible.builtin.service_facts:
 
-- name: Check in tomcat is installed, checking if link to tomcat exists
+- name: Install Java
+  ansible.builtin.package:
+    name: "{{ tomcat_java_packages }}"
+    state: present
+  when:
+    - tomcat_install_java
+  notify: Restart tomcat
+
+- name: Check in tomcat is installed, check if link to tomcat exists
   ansible.builtin.stat:
     path: "{{ tomcat_install_path_link }}"
   register: tomcat_is_installed
@@ -10,13 +18,6 @@
 - name: Set previous version path
   ansible.builtin.set_fact:
     tomcat_previous_version_path: "{{ tomcat_is_installed.stat.lnk_source is defined | ternary(tomcat_is_installed.stat.lnk_source, tomcat_is_installed.stat.path | default('')) }}"
-
-- name: Install Java
-  ansible.builtin.package:
-    name: "{{ tomcat_java_packages }}"
-    state: present
-  when: tomcat_install_java
-  notify: Restart tomcat
 
 - name: Install tomcat
   ansible.builtin.import_tasks: install.yml
@@ -28,7 +29,8 @@
 
 - name: Configure tomcat
   ansible.builtin.import_tasks: configure.yml
-  when: tomcat_state == "present"
+  when:
+    - tomcat_state == "present"
   tags:
     - tomcat-config
 
@@ -37,12 +39,19 @@
     path: "{{ tomcat_install_path }}"
   register: tomcat_is_installed
 
+- name: Set path from wich to migrate
+  ansible.builtin.set_fact:
+    tomcat_previous_version_path: "{{ tomcat_migrate_from_path }}"
+  when:
+    - tomcat_previous_version_path | length < 1
+    - tomcat_migrate_from_path | length > 0
+
 - name: Migrate old tomcat
   ansible.builtin.import_tasks: migrate.yml
   when:
     - tomcat_migrate
     - tomcat_state == "present"
-    - tomcat_previous_version_path | length > 0 or tomcat_migrate_from_path | length > 0
+    - tomcat_previous_version_path | length > 0
     - tomcat_previous_version_path != tomcat_install_path
   tags: tomcat-migrate
 

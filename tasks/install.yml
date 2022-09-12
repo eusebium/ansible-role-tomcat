@@ -57,7 +57,7 @@
       - --transform
       - s#apache-tomcat-{{ tomcat_version }}#{{ _tomcat_instance_prefix + 'apache-tomcat-' + tomcat_version }}#
 
-- name: Create symlink {{ tomcat_install_path }} to {{ tomcat_base_path }}/{{ tomcat_service_name }}
+- name: Create symlink {{ tomcat_install_path }} to {{ tomcat_install_path_link }}
   ansible.builtin.file:
     src: "{{ tomcat_install_path }}"
     dest: "{{ tomcat_install_path_link }}"
