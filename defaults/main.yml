@@ -1,17 +1,21 @@
 ---
-# defaults file for tomcat
 tomcat_state: present
 
+# set to false for installing java with another role.
+# Anyway specify tomcat_java_home!
 tomcat_install_java: true
 tomcat_java_version: 1.8
 tomcat_java_home: /usr/lib/jvm/jre
 tomcat_java_packages:
   - "java-{{ tomcat_java_version }}{% if '1.' in tomcat_java_version | string %}.0{% endif %}-openjdk-headless"
 
-tomcat_version: 8.5.51
+
+tomcat_version: 9.0.65
+# this could be an internal web repository
 tomcat_download_url: https://archive.apache.org/dist/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz
 
-# used for diferencing tomcat instances, default to application asset (es: C21 | lower)
+# used for diferencing tomcat instances by asset or anothe code (es: C21)
+# by default all tomcat resource will have the same name: os user == os group == service name == tomcat symlink
 tomcat_instance_prefix: ''
 _tomcat_instance_prefix: "{{ (tomcat_instance_prefix | length > 0) | ternary(tomcat_instance_prefix | lower + '-', '') }}"
 
@@ -24,6 +28,8 @@ tomcat_service_name: "{{ _tomcat_instance_prefix + 'tomcat' }}"
 tomcat_systemd_config_path: /etc/systemd/system
 tomcat_service_enabled_on_startup: true
 
+# the installation will be on folder tomcat_install_path, but service whill point to symlink.
+# this is uswful for upgrading tomcat version. the role will install the new version and update the symlink.
 tomcat_base_path: /opt
 tomcat_install_path: "{{ tomcat_base_path }}/{{ _tomcat_instance_prefix + 'apache-tomcat-' + tomcat_version }}"
 tomcat_install_path_link: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
@@ -59,11 +65,10 @@ tomcat_jvm_memory_percentage_xmx: 55
 
 tomcat_debug_mode: false
 
+# this are exceptions, if you use often this property is better to change the jinja template.
 tomcat_server_engine_extra_conf:
   jvmRoute: "{{ ansible_hostname + '_' + tomcat_port_ajp | string }}"
-
 tomcat_server_http_extra_conf: {}
-
 tomcat_server_ajp_extra_conf: {}
 
 tomcat_webapps_auto_deployment: true
@@ -73,28 +78,32 @@ tomcat_webapps_default_remove:
   - examples
   - host-manager
   - docs
-  # - manager
+  - manager
 
 # TODO allow only from some ips and/or specific virtualhost, possibily in SSL
 tomcat_allow_manager_access_only_from_localhost: true
 tomcat_allow_host_manager_access_only_from_localhost: true
 
 tomcat_users: []
-
 tomcat_user_roles: []
 
 # Uninstall default parameters
+# TODO: do testing
 tomcat_uninstall_create_backup: true
 tomcat_uninstall_remove_user: false
 tomcat_uninstall_remove_group: false
 tomcat_uninstall_remove_java: false
-
 tomcat_uninstall_remove_all: false
 
-# Upgrade tomcat default parameters
+# migrate tomcat from another instances
+# this could be another tomcat installed by this role or manual installed tomcat
 tomcat_migrate: true
+# service name of the old tomcat (is not mandatory)
 tomcat_migrate_service_name: tomcat
+# old path of the tomcat, modify this path only if you want to migrate from manual installed tomcat
+# is not need to modify the pah for tomcat installed by this role
 tomcat_migrate_from_path: /usr/apache-tomcat-8.5.42
+# list with file in /conf to be copied with force switch
 tomcat_migrate_conf_force: []
   # - context.xml
   # - server.xml
