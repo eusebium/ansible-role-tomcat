@@ -1,9 +1,9 @@
 JAVA_HOME={{ tomcat_java_home }}
 JAVA_OPTS="-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom {{ tomcat_java_opts }}"
-CATALINA_OPTS="
-    -Xms{{ (tomcat_jvm_memory_xms | length > 0) | ternary(tomcat_jvm_memory_xms, (tomcat_jvm_memory_percentage_xms*ansible_memtotal_mb//100) | string + 'M') }}
-    -Xmx{{ (tomcat_jvm_memory_xmx | length > 0) | ternary(tomcat_jvm_memory_xmx, (tomcat_jvm_memory_percentage_xmx*ansible_memtotal_mb//100) | string + 'M') }}
-    -server -XX:+UseParallelGC
-    {% if tomcat_debug_mode == True %}-Xdebug
+CATALINA_OPTS=" \
+    -Xms{{ (tomcat_jvm_memory_xms | length > 0) | ternary(tomcat_jvm_memory_xms, (tomcat_jvm_memory_percentage_xms*ansible_memtotal_mb//100) | string + 'M') }} \
+    -Xmx{{ (tomcat_jvm_memory_xmx | length > 0) | ternary(tomcat_jvm_memory_xmx, (tomcat_jvm_memory_percentage_xmx*ansible_memtotal_mb//100) | string + 'M') }} \
+    -server -XX:+UseParallelGC \
+    {% if tomcat_debug_mode == True %}-Xdebug \
     -Xrunjdwp:transport=dt_socket,address={{ tomcat_port_debug }},server=y,suspend=n{% endif %}"
 CATALINA_PID="{{ tomcat_install_path }}/temp/tomcat.pid"

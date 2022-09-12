@@ -1,82 +1,92 @@
 ---
-# tasks file for tomcat
-
 - name: (uninstall) Check if tomcat service is installed
-  stat:
-    path: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
+  ansible.builtin.stat:
+    path: "{{ tomcat_systemd_config_path }}/{{ tomcat_service_name }}.service"
   register: tomcat_service_installed
 
 - name: (uninstall) Stop tomcat service if running
-  systemd:
+  ansible.builtin.service:
     name: "{{ tomcat_service_name }}"
     enabled: no
     state: stopped
   when: tomcat_service_installed.stat.exists
 
 - name: (uninstall) Remove service file {{ tomcat_service_name }}.service
-  file:
-    path: /usr/lib/systemd/system/{{ tomcat_service_name }}.service
+  ansible.builtin.file:
+    path: "{{ tomcat_systemd_config_path }}/{{ tomcat_service_name }}.service"
     state: absent
 
 - name: (uninstall) Perform systemctl daemon-reload
-  systemd:
+  ansible.builtin.service:
     daemon_reload: yes
   changed_when: false
 
 - name: (uninstall) Check if tomcat is installed
-  stat:
+  ansible.builtin.stat:
     path: "{{ tomcat_install_path }}"
   register: tomcat_is_installed
 
-- name: (uninstall) Remove symlink {{ tomcat_base_path }}/{{ tomcat_service_name }}
-  file:
-    path: "{{ tomcat_base_path }}/{{ tomcat_service_name }}"
+- name: (uninstall) Remove symlink {{ tomcat_install_path_link }}
+  ansible.builtin.file:
+    path: "{{ tomcat_install_path_link }}"
     state: absent
 
 - name: (uninstall) Create backup archive before deletion at {{ tomcat_base_path }}/tomcat-backup-XXX.tgz
-  archive:
+  ansible.builtin.archive:
     path: "{{ tomcat_install_path }}"
-    dest: "{{ tomcat_base_path }}/tomcat-backup-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.tgz"
-  when: tomcat_uninstall_create_backup and tomcat_is_installed.stat.exists
+    dest: "{{ tomcat_base_path }}/tomcat-backup-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}.tgz"
+    owner: root
+    group: root
+    mode: 0640
+  when:
+    - tomcat_uninstall_create_backup
+    - tomcat_is_installed.stat.exists
 
 - name: (uninstall) Remove {{ tomcat_install_path }}
-  file:
+  ansible.builtin.file:
     path: "{{ tomcat_install_path }}"
     state: absent
 
 - name: (uninstall) Check if /var/log/{{ tomcat_service_name }} exists
-  stat:
+  ansible.builtin.stat:
     path: /var/log/{{ tomcat_service_name }}
   register: tomcat_stat_vlog
 
 - name: (uninstall) Create logs backup archive before deletion at {{ tomcat_base_path }}/tomcat-backup-logs-XXX.tgz
-  archive:
+  ansible.builtin.archive:
     path: /var/log/{{ tomcat_service_name }}
-    dest: "{{ tomcat_base_path }}/tomcat-backup-logs-{{ lookup('pipe','date +%Y%m%d%H%M%S') }}.tgz"
-  when: tomcat_uninstall_create_backup and tomcat_stat_vlog.stat.exists
+    dest: "{{ tomcat_base_path }}/tomcat-backup-logs-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}.tgz"
+    owner: root
+    group: root
+    mode: 0640
+  when:
+    - tomcat_uninstall_create_backup
+    - tomcat_stat_vlog.stat.exists
 
 - name: (uninstall) Remove /var/log/{{ tomcat_service_name }}
-  file:
+  ansible.builtin.file:
     path: /var/log/{{ tomcat_service_name }}
     state: absent
 
 - name: (uninstall) Delete user {{ tomcat_user }}
-  user:
+  ansible.builtin.user:
     name: "{{ tomcat_user }}"
-    groups: "{{ tomcat_user_group }}"
     state: absent
     force: yes
-  when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_user
+  when:
+    - tomcat_uninstall_remove_all or tomcat_uninstall_remove_user
 
 - name: (uninstall) Delete group {{ tomcat_user_group }}
-  group:
+  ansible.builtin.group:
     name: "{{ tomcat_user_group }}"
     state: absent
-  when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_group
+  when:
+    - tomcat_uninstall_remove_all or tomcat_uninstall_remove_group
 
 - name: (uninstall) Uninstall Java
-  yum:
+  ansible.builtin.package:
     name: "{{ item.package }}"
     state: absent
-  with_items: "{{ tomcat_java_packages }}"
-  when: tomcat_uninstall_remove_all or tomcat_uninstall_remove_java
+  loop: "{{ tomcat_java_packages }}"
+  when:
+    - tomcat_uninstall_remove_all or tomcat_uninstall_remove_java

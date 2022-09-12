@@ -9,7 +9,7 @@ tomcat_java_packages:
   - "java-{{ tomcat_java_version }}{% if '1.' in tomcat_java_version | string %}.0{% endif %}-openjdk-headless"
 
 tomcat_version: 8.5.51
-tomcat_download_url: https://archive.apache.org/dist
+tomcat_download_url: https://archive.apache.org/dist/tomcat/tomcat-{{ tomcat_version.split('.')[0] }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz
 
 # used for diferencing tomcat instances, default to application asset (es: C21 | lower)
 tomcat_instance_prefix: ''

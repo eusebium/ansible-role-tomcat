@@ -1,5 +1,4 @@
 ---
-# tasks file for tomcat
 - name: Create directory for ServerInfo.properties
   ansible.builtin.file:
     path: "{{ tomcat_install_path }}/lib/org/apache/catalina/util"
@@ -13,6 +12,7 @@
     content: |
       server.info=
       server.number=
+      server.built=
     dest: "{{ tomcat_install_path }}/lib/org/apache/catalina/util/ServerInfo.properties"
     owner: root
     group: "{{ tomcat_user_group }}"

@@ -103,6 +103,8 @@
     dest: "{{ tomcat_install_path }}/webapps/host-manager/META-INF/context.xml"
     mode: preserve
   notify: Restart tomcat
+  when:
+    - tomcat_stat_host_manager.stat.exists
 
 - name: Configure setenv.sh
   ansible.builtin.template:
